@@ -5,9 +5,10 @@ from fastapi import FastAPI
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
 import uvicorn
+import threading
 
-# Replace with your Telegram Bot Token
-TELEGRAM_BOT_TOKEN = "7923532245:AAEU6PMcm_ImVuELVoWV4H5iA2Qn0Fxxtyg"
+# Environment variables (Replace with your actual token)
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN" , "7923532245:AAEU6PMcm_ImVuELVoWV4H5iA2Qn0Fxxtyg")
 
 # Logging setup
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
@@ -21,9 +22,11 @@ DOWNLOAD_PATH = "downloads"
 os.makedirs(DOWNLOAD_PATH, exist_ok=True)
 
 async def start(update: Update, context: CallbackContext) -> None:
+    """Send a welcome message when /start command is used"""
     await update.message.reply_text("Send me a YouTube video link, and I'll download it for you!")
 
 async def download_video(update: Update, context: CallbackContext) -> None:
+    """Download the YouTube video and send it to the user"""
     url = update.message.text
 
     if "youtube.com" not in url and "youtu.be" not in url:
@@ -54,20 +57,20 @@ async def download_video(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text(f"Error: {e}")
 
 def run_telegram_bot():
-    app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, download_video))
+    """Start the Telegram bot"""
+    bot_app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+    bot_app.add_handler(CommandHandler("start", start))
+    bot_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, download_video))
     
     print("Bot is running...")
-    app.run_polling()
+    bot_app.run_polling()
 
-# Route for Koyeb to check the server status
+# FastAPI Route to Check Status
 @app.get("/")
 def home():
     return {"status": "running", "message": "YouTube Downloader Bot is online!"}
 
-# Run Telegram bot in background
-import threading
+# Run Telegram bot in a separate thread
 threading.Thread(target=run_telegram_bot, daemon=True).start()
 
 if __name__ == "__main__":
